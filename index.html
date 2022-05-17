@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Tag, you&apos;re it!</title>
+		<style>
+			body
+			{
+			    margin: 0;
+			}
+			
+            #notificationContainer
+            {
+                box-sizing: border-box;
+                
+                padding: 1em;
+                
+                top: 0px;
+                left: 0px;
+                
+                width: 100vw;
+                height: 100vh;
+            }
+		</style>
+		
+		<script src="https://kerrishaus.com/assets/threejs/build/three.min.js"></script>
+		<script src="https://kerrishaus.com/assets/scripts/jquery-3.6.0.min.js"></script>
+		
+		<script src="https://portal.kerrishaus.com/assets/javascript/messages.js"></script>
+		<link rel='stylesheet' href='https://portal.kerrishaus.com/assets/styles/messages.css'></link>
+	</head>
+	<body id='game'>
+	    <style>
+	        #blocker
+	        {
+	            position: absolute;
+	            z-index: 10000;
+	            width: 100vw;
+	            height: 100vh;
+	            
+	            display: flex;
+	            justify-content: center;
+	            align-items: center;
+	            
+	            background-color: #000000cc;
+	            color: white;
+	            
+	            font-size: 36px;
+	            
+	            opacity: 1;
+	        }
+	    </style>
+	    
+	    <div id='blocker'>
+	        click to play
+	    </div>
+	    
+	    <script>
+	        var paused = true;
+	    
+            $("#blocker").click(function()
+            {
+		    	document.body.requestPointerLock();
+		    	$(this).hide();
+		    	
+		    	paused = false;
+			});
+			
+			$(document).keydown(function()
+			{
+			    if (event.keyCode == 27)
+			    {
+			        if (!paused)
+			        {
+        		        console.log("show");
+    			        document.exitPointerLock();
+        		        $("#blocker").show();
+			        }
+			        else
+                    {
+                        console.log("hide");
+                        document.body.requestPointerLock();
+                        $("#blocker").hide();
+                    }
+    		        
+    		        paused = !paused;
+			    }
+			});
+		</script>
+	
+		<script>
+			const renderer = new THREE.WebGLRenderer();
+			renderer.setSize(window.innerWidth, window.innerHeight);
+			document.body.appendChild(renderer.domElement);
+			
+			const scene = new THREE.Scene();
+			const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+			
+			const playerGeometry = new THREE.BoxGeometry();
+			const playerMaterial = new THREE.MeshBasicMaterial({color: 0x00ff00});
+			const player = new THREE.Mesh(playerGeometry, playerMaterial);
+						
+			player.position.z = 0;
+            camera.position.y = 2;
+            player.attach(camera);
+			scene.add(player);
+			
+			const floorGeometry = new THREE.PlaneGeometry(100, 100);
+			const floorMaterial = new THREE.MeshBasicMaterial({color: 0xffff00, side: THREE.DoubleSide});
+			const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+			
+			floor.quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), 1.5708);
+			
+			scene.add(floor);
+			
+			var mouse = new THREE.Vector2();
+			
+			var prevMouseX = 0;
+			var prevMouseY = 0;
+			
+			function onMouseMove(event)
+			{
+			    event.preventDefault();
+			    
+			    if (event.movementX < 0)
+			        // rotate character left
+			        player.rotation.y += 0.02;
+		        else if (event.movementX > 0)
+		            // rotate character right
+                    player.rotation.y -= 0.02;
+		            
+	            if (event.movementY < 0)
+	                camera.rotation.x += 0.015;
+		        else if (event.movementY > 0)
+	                camera.rotation.x -= 0.015;
+			    
+			    return;
+			}
+			
+			window.addEventListener('mousemove', onMouseMove);
+
+			window.addEventListener('resize', function(event)
+			{
+			    renderer.setSize(window.innerWidth, window.innerHeight);
+			    camera.aspect = window.innerWidth / window.innerHeight;
+			    
+			    camera.updateProjectionMatrix();
+			})
+			
+			var keys = new Array();
+			
+			window.addEventListener("keydown", function(event)
+			{
+	            keys[event.code] = true;
+			}, false);
+			
+			window.addEventListener("keyup", function(event)
+			{
+			    keys[event.code] = false;
+			}, false);
+			
+			var playerMoveSpeed = 1;
+			var playerJumpPower = 1;
+			var playerOnGround = true;
+			var playerDy = 0;
+			var playerDx = 0;
+			var playerDz = 0;
+			
+            var worldGravity = 0.05; // strength per frame of gravity. higher is stronger
+            var worldDrag = 0.8; // play with this value to change drag. higher is less??
+            var worldGroundDrag = 0.6; // play with this value to change ground movement. higher is less??
+            var worldGround = 1;
+            
+			const animate = function()
+			{
+				requestAnimationFrame(animate);
+				
+                // react to keyboard state
+                if (keys["Space"] && playerOnGround) { playerDy = playerJumpPower }
+                if (keys["KeyA"]) { playerDx = -playerMoveSpeed }
+                if (keys["KeyD"]) { playerDx = playerMoveSpeed }
+                if (keys["KeyW"]) { playerDz = -playerMoveSpeed }
+                if (keys["KeyS"]) { playerDz = playerMoveSpeed }
+                
+                // apply gravity drag and move player
+                playerDy -= worldGravity;
+                playerDy *= worldDrag;
+                playerDx *= playerOnGround ? worldGroundDrag : worldDrag;
+                playerDz *= playerOnGround ? worldGroundDrag : worldDrag;
+                player.translateX(playerDx);
+                player.position.y += playerDy;
+                player.translateZ(playerDz);
+                
+                // test ground contact and left and right limits
+                if (player.position.y <= worldGround)
+                {
+                    player.position.y = worldGround;
+                    playerDy = 0;
+                    playerOnGround = true;
+                }
+                else
+                    playerOnGround = false;
+                     
+                /*
+                if (this.x > ctx.canvas.width) {
+                    this.x -= ctx.canvas.width;
+                } else if (this.x + this.size < 0) {
+                    this.x += ctx.canvas.width;
+                }
+                */
+				
+				/*
+				if (keys["KeyW"])
+				    playerVelocity.z -= 0.1;
+				    
+			    if (keys["KeyA"])
+				    playerVelocity.x -= 0.1;
+				    
+			    if (keys["KeyS"])
+				    playerVelocity.z += 0.1;
+				
+			    if (keys["KeyD"])
+				    playerVelocity.x += 0.1;
+				    
+			    if (keys["Space"])
+			        if (player.position.y == 0)
+				        playerVelocity.y += 1;
+				    
+			    playerVelocity.normalize();
+				    
+			    player.position.x += playerVelocity.x;
+			    player.position.y += playerVelocity.y;
+			    player.position.z += playerVelocity.z;
+			    
+			    if (playerVelocity.x > 0)
+			        playerVelocity.x -= 0.1;
+			    playerVelocity.y = 0;
+			    playerVelocity.z = 0;
+			    */
+			    
+				renderer.render(scene, camera);
+			};
+			
+			animate();
+		</script>
+	</body>
+</html>
