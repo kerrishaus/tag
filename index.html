@@ -87,7 +87,7 @@
 			    }
 			});
 		</script>
-	
+		
 		<script>
 			const renderer = new THREE.WebGLRenderer();
 			renderer.setSize(window.innerWidth, window.innerHeight);
@@ -95,15 +95,6 @@
 			
 			const scene = new THREE.Scene();
 			const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-			
-			const playerGeometry = new THREE.BoxGeometry();
-			const playerMaterial = new THREE.MeshBasicMaterial({color: 0x00ff00});
-			const player = new THREE.Mesh(playerGeometry, playerMaterial);
-						
-			player.position.z = 0;
-            camera.position.y = 2;
-            player.attach(camera);
-			scene.add(player);
 			
 			const floorGeometry = new THREE.PlaneGeometry(100, 100);
 			const floorMaterial = new THREE.MeshBasicMaterial({color: 0xffff00, side: THREE.DoubleSide});
@@ -124,10 +115,10 @@
 			    
 			    if (event.movementX < 0)
 			        // rotate character left
-			        player.rotation.y += 0.02;
+			        player.model.rotation.y += 0.02;
 		        else if (event.movementX > 0)
 		            // rotate character right
-                    player.rotation.y -= 0.02;
+                    player.model.rotation.y -= 0.02;
 		            
 	            if (event.movementY < 0)
 	                camera.rotation.x += 0.015;
@@ -159,89 +150,184 @@
 			    keys[event.code] = false;
 			}, false);
 			
-			var playerMoveSpeed = 1;
-			var playerJumpPower = 1;
-			var playerOnGround = true;
-			var playerDy = 0;
-			var playerDx = 0;
-			var playerDz = 0;
+			class Player
+			{
+			    constructor()
+			    {
+			        this.moveSpeed = 1;
+			        this.jumpPower = 5;
+			        this.onGround = true;
+			        this.dx = 0;
+			        this.dy = 0;
+			        this.dz = 0;
+			        
+        			const playerGeometry = new THREE.BoxGeometry();
+        			const playerMaterial = new THREE.MeshBasicMaterial({color: 0x00ff00});
+        			this.model = new THREE.Mesh(playerGeometry, playerMaterial);
+			    }
+			    
+			    update()
+			    {
+                    // apply gravity drag and move player
+                    this.dy -= world.gravity;
+                    this.dy *= world.drag;
+                    this.dx *= this.onGround ? world.groundDrag : world.drag;
+                    this.dz *= this.onGround ? world.groundDrag : world.drag;
+                    this.model.translateX(this.dx);
+                    this.model.position.y += this.dy;
+                    this.model.translateZ(this.dz);
+                    
+                    // test ground contact
+                    if (this.model.position.y <= world.ground)
+                    {
+                        this.model.position.y = world.ground;
+                        this.dy = 0;
+                        this.onGround = true;
+                    }
+                    else
+                        this.onGround = false;
+			    }
+			};
 			
-            var worldGravity = 0.05; // strength per frame of gravity. higher is stronger
-            var worldDrag = 0.8; // play with this value to change drag. higher is less??
-            var worldGroundDrag = 0.6; // play with this value to change ground movement. higher is less??
-            var worldGround = 1;
-            
+			class World
+			{
+			    constructor()
+			    {
+			        this.gravity = 0.15;
+			        this.drag = 0.8;
+			        this.groundDrag = 0.6;
+			        this.ground = 1;
+			    }
+			};
+			
+			const world = new World();
+			
+			const player = new Player();
+			player.model.position.z = 0;
+            camera.position.y = 2;
+            player.model.attach(camera);
+			scene.add(player.model);
+			
+			const players = new Map();
+			
 			const animate = function()
 			{
 				requestAnimationFrame(animate);
 				
                 // react to keyboard state
-                if (keys["Space"] && playerOnGround) { playerDy = playerJumpPower }
-                if (keys["KeyA"]) { playerDx = -playerMoveSpeed }
-                if (keys["KeyD"]) { playerDx = playerMoveSpeed }
-                if (keys["KeyW"]) { playerDz = -playerMoveSpeed }
-                if (keys["KeyS"]) { playerDz = playerMoveSpeed }
+                if (keys["Space"] && player.onGround) { player.dy = player.jumpPower }
+                if (keys["KeyA"]) { player.dx = -player.moveSpeed }
+                if (keys["KeyD"]) { player.dx = player.moveSpeed }
+                if (keys["KeyW"]) { player.dz = -player.moveSpeed }
+                if (keys["KeyS"]) { player.dz = player.moveSpeed }
                 
-                // apply gravity drag and move player
-                playerDy -= worldGravity;
-                playerDy *= worldDrag;
-                playerDx *= playerOnGround ? worldGroundDrag : worldDrag;
-                playerDz *= playerOnGround ? worldGroundDrag : worldDrag;
-                player.translateX(playerDx);
-                player.position.y += playerDy;
-                player.translateZ(playerDz);
+                player.update();
                 
-                // test ground contact and left and right limits
-                if (player.position.y <= worldGround)
-                {
-                    player.position.y = worldGround;
-                    playerDy = 0;
-                    playerOnGround = true;
-                }
-                else
-                    playerOnGround = false;
-                     
-                /*
-                if (this.x > ctx.canvas.width) {
-                    this.x -= ctx.canvas.width;
-                } else if (this.x + this.size < 0) {
-                    this.x += ctx.canvas.width;
-                }
-                */
-				
-				/*
-				if (keys["KeyW"])
-				    playerVelocity.z -= 0.1;
-				    
-			    if (keys["KeyA"])
-				    playerVelocity.x -= 0.1;
-				    
-			    if (keys["KeyS"])
-				    playerVelocity.z += 0.1;
-				
-			    if (keys["KeyD"])
-				    playerVelocity.x += 0.1;
-				    
-			    if (keys["Space"])
-			        if (player.position.y == 0)
-				        playerVelocity.y += 1;
-				    
-			    playerVelocity.normalize();
-				    
-			    player.position.x += playerVelocity.x;
-			    player.position.y += playerVelocity.y;
-			    player.position.z += playerVelocity.z;
-			    
-			    if (playerVelocity.x > 0)
-			        playerVelocity.x -= 0.1;
-			    playerVelocity.y = 0;
-			    playerVelocity.z = 0;
-			    */
-			    
+                sendMovementPosition(player.model.position);
+                
 				renderer.render(scene, camera);
 			};
-			
-			animate();
 		</script>
+		
+		<script type="text/javascript">
+            class NetworkedObject extends THREE.Object3D
+            {
+                construct(id, position)
+                {
+                    this.id = id;
+                    this.position = position;
+                }
+            }
+            
+            /*
+            Socket instructions. In the future, I would like to improve this with a real event based system.
+            1 = Assigns this script instance to a client.
+                Format: 1:clientID:positionX;positionY;positionZ
+            2 = A new client has joined. Ignore if clientID is this client.
+                Format: 2:clientID:positionX;positionY;positionZ
+            3 = A client has moved. Ignore if clientID is this client.
+                Format: 3:clientID:positionX;positionY;positionZ
+            */
+            
+            var clientId = -1;
+        
+            var socket = new WebSocket("ws://localhost:8887");
+
+            socket.onopen = function(e) 
+            {
+                console.log("Connected to server.");
+                
+                animate();
+            }
+
+            socket.onclose = function(e) 
+            {
+                console.log("Disconnected from server.");
+            }
+
+            socket.onmessage = function(e)
+            {
+                const message = e.data.split(':');
+
+                switch (message[0])
+                {
+                    case "1": // Give us our player information.
+                    {
+                        clientId = message[1];
+                        let position = message[2].split(';');
+                        console.log(position);
+                        console.log(player);
+                        break;
+                    }
+                    case "2": // New player
+                    {
+                        if (message[1] == clientId)
+                            break;
+                            
+                        console.log("A new player joined the game.");
+                        
+                        const newPlayer = new Player();
+                        const position = message[2].split(";");
+                        newPlayer.model.position.x = position[0];
+                        newPlayer.model.position.y = position[1];
+                        newPlayer.model.position.z = position[2];
+                        scene.add(newPlayer.model);
+                        
+                        players.set(message[1], newPlayer);
+                        
+                        break;
+                    }
+                    case "3": // A player changed their position
+                    {
+                        if (message[1] == clientId)
+                            break;
+                        else if (message[1] == -1)
+                            break;
+
+                        const player = players.get(message[1]);
+                        const position = message[2].split(';');
+                        
+                        player.model.position.x = position[0];
+                        player.model.position.y = position[1];
+                        player.model.position.z = position[2];
+
+                        break;
+                    }
+                    default:
+                        console.error("Invalid command received from server.");
+                        break;
+                }
+            }
+
+            socket.onerror = function(e) 
+            {
+                console.error("There was an error.");
+            }
+
+            function sendMovementPosition(position)
+            {
+                socket.send("3:" + clientId + ":" + position.x + ";" + position.y + ";" + position.z);
+            }
+        </script>
 	</body>
 </html>
