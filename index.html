@@ -21,16 +21,7 @@
                 width: 100vw;
                 height: 100vh;
             }
-		</style>
-		
-		<script src="https://kerrishaus.com/assets/threejs/build/three.min.js"></script>
-		<script src="https://kerrishaus.com/assets/scripts/jquery-3.6.0.min.js"></script>
-		
-		<script src="https://portal.kerrishaus.com/assets/javascript/messages.js"></script>
-		<link rel='stylesheet' href='https://portal.kerrishaus.com/assets/styles/messages.css'></link>
-	</head>
-	<body id='game'>
-	    <style>
+            
 	        #blocker
 	        {
 	            position: absolute;
@@ -49,8 +40,15 @@
 	            
 	            opacity: 1;
 	        }
-	    </style>
-	    
+		</style>
+		
+		<script src="https://kerrishaus.com/assets/threejs/build/three.min.js"></script>
+		<script src="https://kerrishaus.com/assets/scripts/jquery-3.6.0.min.js"></script>
+		
+		<script src="https://portal.kerrishaus.com/assets/javascript/messages.js"></script>
+		<link rel='stylesheet' href='https://portal.kerrishaus.com/assets/styles/messages.css'></link>
+	</head>
+	<body id='game'>
 	    <div id='blocker'>
 	        click to play
 	    </div>
@@ -70,6 +68,8 @@
 			{
 			    if (event.keyCode == 27)
 			    {
+    		        paused = !paused;
+    		        
 			        if (!paused)
 			        {
         		        console.log("show");
@@ -81,253 +81,19 @@
                         console.log("hide");
                         document.body.requestPointerLock();
                         $("#blocker").hide();
+                        animate();
                     }
-    		        
-    		        paused = !paused;
 			    }
 			});
 		</script>
 		
-		<script>
-			const renderer = new THREE.WebGLRenderer();
-			renderer.setSize(window.innerWidth, window.innerHeight);
-			document.body.appendChild(renderer.domElement);
-			
-			const scene = new THREE.Scene();
-			const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-			
-			const floorGeometry = new THREE.PlaneGeometry(100, 100);
-			const floorMaterial = new THREE.MeshBasicMaterial({color: 0xffff00, side: THREE.DoubleSide});
-			const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-			
-			floor.quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), 1.5708);
-			
-			scene.add(floor);
-			
-			var mouse = new THREE.Vector2();
-			
-			var prevMouseX = 0;
-			var prevMouseY = 0;
-			
-			function onMouseMove(event)
-			{
-			    event.preventDefault();
-			    
-			    if (event.movementX < 0)
-			        // rotate character left
-			        player.model.rotation.y += 0.02;
-		        else if (event.movementX > 0)
-		            // rotate character right
-                    player.model.rotation.y -= 0.02;
-		            
-	            if (event.movementY < 0)
-	                camera.rotation.x += 0.015;
-		        else if (event.movementY > 0)
-	                camera.rotation.x -= 0.015;
-			    
-			    return;
-			}
-			
-			window.addEventListener('mousemove', onMouseMove);
-
-			window.addEventListener('resize', function(event)
-			{
-			    renderer.setSize(window.innerWidth, window.innerHeight);
-			    camera.aspect = window.innerWidth / window.innerHeight;
-			    
-			    camera.updateProjectionMatrix();
-			})
-			
-			var keys = new Array();
-			
-			window.addEventListener("keydown", function(event)
-			{
-	            keys[event.code] = true;
-			}, false);
-			
-			window.addEventListener("keyup", function(event)
-			{
-			    keys[event.code] = false;
-			}, false);
-			
-			class Player
-			{
-			    constructor()
-			    {
-			        this.moveSpeed = 1;
-			        this.jumpPower = 5;
-			        this.onGround = true;
-			        this.dx = 0;
-			        this.dy = 0;
-			        this.dz = 0;
-			        
-        			const playerGeometry = new THREE.BoxGeometry();
-        			const playerMaterial = new THREE.MeshBasicMaterial({color: 0x00ff00});
-        			this.model = new THREE.Mesh(playerGeometry, playerMaterial);
-			    }
-			    
-			    update()
-			    {
-                    // apply gravity drag and move player
-                    this.dy -= world.gravity;
-                    this.dy *= world.drag;
-                    this.dx *= this.onGround ? world.groundDrag : world.drag;
-                    this.dz *= this.onGround ? world.groundDrag : world.drag;
-                    this.model.translateX(this.dx);
-                    this.model.position.y += this.dy;
-                    this.model.translateZ(this.dz);
-                    
-                    // test ground contact
-                    if (this.model.position.y <= world.ground)
-                    {
-                        this.model.position.y = world.ground;
-                        this.dy = 0;
-                        this.onGround = true;
-                    }
-                    else
-                        this.onGround = false;
-			    }
-			};
-			
-			class World
-			{
-			    constructor()
-			    {
-			        this.gravity = 0.15;
-			        this.drag = 0.8;
-			        this.groundDrag = 0.6;
-			        this.ground = 1;
-			    }
-			};
-			
-			const world = new World();
-			
-			const player = new Player();
-			player.model.position.z = 0;
-            camera.position.y = 2;
-            player.model.attach(camera);
-			scene.add(player.model);
-			
-			const players = new Map();
-			
-			const animate = function()
-			{
-				requestAnimationFrame(animate);
-				
-                // react to keyboard state
-                if (keys["Space"] && player.onGround) { player.dy = player.jumpPower }
-                if (keys["KeyA"]) { player.dx = -player.moveSpeed }
-                if (keys["KeyD"]) { player.dx = player.moveSpeed }
-                if (keys["KeyW"]) { player.dz = -player.moveSpeed }
-                if (keys["KeyS"]) { player.dz = player.moveSpeed }
-                
-                player.update();
-                
-                sendMovementPosition(player.model.position);
-                
-				renderer.render(scene, camera);
-			};
-		</script>
+		<script src='https://kerrishaus.com/games/tag/assets/scripts/KeyboardInput.js'></script>
 		
-		<script type="text/javascript">
-            class NetworkedObject extends THREE.Object3D
-            {
-                construct(id, position)
-                {
-                    this.id = id;
-                    this.position = position;
-                }
-            }
-            
-            /*
-            Socket instructions. In the future, I would like to improve this with a real event based system.
-            1 = Assigns this script instance to a client.
-                Format: 1:clientID:positionX;positionY;positionZ
-            2 = A new client has joined. Ignore if clientID is this client.
-                Format: 2:clientID:positionX;positionY;positionZ
-            3 = A client has moved. Ignore if clientID is this client.
-                Format: 3:clientID:positionX;positionY;positionZ
-            */
-            
-            var clientId = -1;
-        
-            var socket = new WebSocket("ws://localhost:8887");
-
-            socket.onopen = function(e) 
-            {
-                console.log("Connected to server.");
-                
-                animate();
-            }
-
-            socket.onclose = function(e) 
-            {
-                console.log("Disconnected from server.");
-            }
-
-            socket.onmessage = function(e)
-            {
-                const message = e.data.split(':');
-
-                switch (message[0])
-                {
-                    case "1": // Give us our player information.
-                    {
-                        clientId = message[1];
-                        let position = message[2].split(';');
-                        console.log(position);
-                        console.log(player);
-                        break;
-                    }
-                    case "2": // New player
-                    {
-                        if (message[1] == clientId)
-                            break;
-                            
-                        console.log("A new player joined the game.");
-                        
-                        const newPlayer = new Player();
-                        const position = message[2].split(";");
-                        newPlayer.model.position.x = position[0];
-                        newPlayer.model.position.y = position[1];
-                        newPlayer.model.position.z = position[2];
-                        scene.add(newPlayer.model);
-                        
-                        players.set(message[1], newPlayer);
-                        
-                        break;
-                    }
-                    case "3": // A player changed their position
-                    {
-                        if (message[1] == clientId)
-                            break;
-                        else if (message[1] == -1)
-                            break;
-
-                        const player = players.get(message[1]);
-                        const position = message[2].split(';');
-                        
-                        player.model.position.x = position[0];
-                        player.model.position.y = position[1];
-                        player.model.position.z = position[2];
-
-                        break;
-                    }
-                    default:
-                        console.error("Invalid command received from server.");
-                        break;
-                }
-            }
-
-            socket.onerror = function(e) 
-            {
-                console.error("There was an error.");
-            }
-
-            function sendMovementPosition(position)
-            {
-                socket.send("3:" + clientId + ":" + position.x + ";" + position.y + ";" + position.z);
-            }
-        </script>
+		<script src='https://kerrishaus.com/games/tag/assets/scripts/Player.js'></script>
+		<script src='https://kerrishaus.com/games/tag/assets/scripts/World.js'></script>
+		
+		<script src='https://kerrishaus.com/games/tag/assets/scripts/Client.js'></script>
+		
+		<script src='https://kerrishaus.com/games/tag/assets/scripts/Game.js'></script>
 	</body>
 </html>
